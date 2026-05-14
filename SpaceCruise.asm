@@ -88,7 +88,7 @@ initGame
     
     ;player start position
     LD R0, SCREEN_WIDTH
-    ADD R0, R0, #-15
+    ADD R0, R0, #-7
     ST R0, PLAYER_POS
     
     ;reset score
@@ -120,7 +120,7 @@ initClearLoop
 
 RET
 
-WELCOME_MSG     .STRINGZ    "|------- SPACE CRUISE -------|\nPress any key to begin..."
+WELCOME_MSG     .STRINGZ    "|-SPACE CRUISE-|\nPress any key to begin..."
 ;************************inputCheck*****************************
 ;  Description: Check keyboard for left or right movement,
 ;               exclusively using 'a' (left) or 'd' (right)
@@ -192,9 +192,9 @@ inputCheck
 RET
 
 ;=========================Data Section==============================;
-SCREEN_WIDTH    .FILL   #30         ;screen: 30w x 20h
-SCREEN_HEIGHT   .FILL   #8
-PLAYER_ROW      .FILL   #7         ;spaceship always at bottom (row 18)
+SCREEN_WIDTH    .FILL   #16         ;screen: 16w x 8h
+SCREEN_HEIGHT   .FILL   #10
+PLAYER_ROW      .FILL   #9         ;spaceship always at bottom (row 18)
 PLAYER_POS      .BLKW   1
 ASCII_SHIP      .FILL   #65         ;'A'
 ASCII_ASTEROID  .FILL   #42         ;'*'
@@ -202,7 +202,7 @@ ASCII_SPACE     .FILL   #32         ;' '
 MAX_ASTEROIDS   .FILL   #8          ;no more than 8 asteroids at a time
 ASTEROIDS       .BLKW   16          ;8 asteroids * 2 words (row & col) each
 SCORE           .BLKW   1
-SPEED           .FILL   #10000      ;preset speed
+SPEED           .FILL   #13000      ;preset speed
 ; SPEED           .BLKW   1         ;use for variable speed
 SEED            .FILL   xACE1       ;random number generator seed
 MAGIC_SEED      .Fill   #17         ;prime number for randomness
@@ -401,7 +401,7 @@ RET
 ;********************************************************************
 drawGame
     ;clear console
-    ; LD R1, #25
+    ; LD R1, #5
     ; clearLoop
     ;     LD R0, NEWLINE
     ;     OUT
@@ -419,8 +419,8 @@ drawGame
     LD R3, SCREEN_HEIGHT    ;row counter
     AND R4, R4, #0          ;clear R4 for current row number
     
-    LEA R0, BORDER_TOP
-    PUTS
+    ; LEA R0, BORDER_TOP
+    ; PUTS
     
     ;loop over rows 0-19
 rowLoop
