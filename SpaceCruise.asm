@@ -26,11 +26,17 @@
     gameLoop
         JSR inputCheck          ;check for input (keys: A, D)
         JSR updateAsteroids     ;move asteroids
-        JSR collisionCheck      ;check for asteroid-ship collision
-        BRnp collided           ;R0 != 0 means collision
+        JSR collisionCheck      ;check for asteroid-ship collision (R0!=0 means collision)
+        ADD R0, R0, #0          ;set condition based on R0
+        BRp collided            ;R0 != 0 means collision
         JSR drawGame            ;render screen
         ;TODO: increase speed
-        JSR delay               ;creates game-pace
+        
+        ; JSR delay               ;creates game-pace
+        LD R1, SPEED        ;hardcoded to #10000
+    delayLoop           ;countdown to create delay
+        ADD R1, R1, #-1
+        BRzp delayLoop
         
         LD R0, SCORE
         ADD R0, R0, #1      ;R0=1
@@ -42,8 +48,7 @@ collided
 
 HALT
 
-STACK           .FILL   x4015
-
+STACK       .FILL   x4015
 ;************************initGame*****************************
 ;  Description: Initialize player position, score,
 ;               and asteroids array.
@@ -72,10 +77,14 @@ initGame
     
     LEA R0, WELCOME_MSG
     PUTS
-beginLoop
-    LDI R4, KBSR        ;keyboard ready check
-    BRzp beginLoop
+    LEA R0, NEW_LINE
+    PUTS
+
+    beginLoop               ;wait for user to enter any key
+        LDI R4, KBSR        ;keyboard ready check
+        BRzp beginLoop
     LDI R0, KBDR        ;consume input
+    
     
     ;player start position
     LD R0, SCREEN_WIDTH
@@ -111,7 +120,7 @@ initClearLoop
 
 RET
 
-WELCOME_MSG     .STRINGZ    "^^^^^^^^^^^^ SPACE CRUISE ^^^^^^^^^^^^\nPress any key to begin..."
+WELCOME_MSG     .STRINGZ    "|------- SPACE CRUISE -------|\nPress any key to begin..."
 ;************************inputCheck*****************************
 ;  Description: Check keyboard for left or right movement,
 ;               exclusively using 'a' (left) or 'd' (right)
@@ -170,7 +179,7 @@ inputCheck
         ST R0, PLAYER_POS       ;save new position
 
     noInput     ;finish polling              
-    
+    LDI R0, KBDR        ;consume input
     ;Restore registers from stack
     LDR R1, R6, #0
     ADD R6, R6, #1
@@ -184,22 +193,22 @@ RET
 
 ;=========================Data Section==============================;
 SCREEN_WIDTH    .FILL   #30         ;screen: 30w x 20h
-SCREEN_HEIGHT   .FILL   #20
-PLAYER_ROW      .FILL   #18         ;spaceship always at bottom (row 18)
+SCREEN_HEIGHT   .FILL   #8
+PLAYER_ROW      .FILL   #7         ;spaceship always at bottom (row 18)
 PLAYER_POS      .BLKW   1
-ASCII_SHIP      .FILL   #94         ;'^'
+ASCII_SHIP      .FILL   #65         ;'A'
 ASCII_ASTEROID  .FILL   #42         ;'*'
 ASCII_SPACE     .FILL   #32         ;' '
 MAX_ASTEROIDS   .FILL   #8          ;no more than 8 asteroids at a time
 ASTEROIDS       .BLKW   16          ;8 asteroids * 2 words (row & col) each
 SCORE           .BLKW   1
-SPEED           .FILL   #63000       ;preset speed
+SPEED           .FILL   #10000      ;preset speed
 ; SPEED           .BLKW   1         ;use for variable speed
 SEED            .FILL   xACE1       ;random number generator seed
 MAGIC_SEED      .Fill   #17         ;prime number for randomness
 NEW_LINE        .STRINGZ    "\n"
-NEG_ASCII_a     .FILL       #-65
-NEG_ASCII_d     .FILL       #-68
+NEG_ASCII_a     .FILL       #-97
+NEG_ASCII_d     .FILL       #-100
 NEG_ONE         .FILL       #-1
 KBSR            .FILL       xFE00
 KBDR            .FILL       xFE02
@@ -341,6 +350,7 @@ findEmpty
     LDR R3, R1, #0      ;load current asteroid's row for checking in R3
     ADD R3, R3, #1      ;next row
     BRz foundEmpty      ;was -1, now zero == empty row
+    
     ADD R1, R1, #2      ;next asteroid (each is 2 words)
     ADD R2, R2, #-1     ;decrement asteroid count
     BRp findEmpty
@@ -390,6 +400,13 @@ RET
 ;R7 - 
 ;********************************************************************
 drawGame
+    ;clear console
+    ; LD R1, #25
+    ; clearLoop
+    ;     LD R0, NEWLINE
+    ;     OUT
+    ;     ADD R1, R1, #-1
+    ;     BRp clearLoop
     ;save registers
     ADD R6, R6, #-6
     STR R1, R6, #0
@@ -398,18 +415,18 @@ drawGame
     STR R4, R6, #3
     STR R5, R6, #4
     STR R7, R6, #5
-
-    ;clear console
-    ;manually for now
     
     LD R3, SCREEN_HEIGHT    ;row counter
     AND R4, R4, #0          ;clear R4 for current row number
+    
+    LEA R0, BORDER_TOP
+    PUTS
     
     ;loop over rows 0-19
 rowLoop
     LD R5, SCREEN_WIDTH     ;column counter
     AND R2, R2, #0          ;current column=0
-    
+
     ;loop over column 0-29
 colLoop
     ;if (row,col) == player: print '^'
@@ -474,6 +491,8 @@ printChar    ;else print ' '
     LDR R1, R6, #0
     ADD R6, R6, #6
 RET
+; Draw variables
+BORDER_TOP  .STRINGZ    "=============================="
 
 ;************************collisionCheck*****************************
 ;  Description: Checks for player-asteroid sharing same space
@@ -505,6 +524,8 @@ collisionCheck
     LEA R1, ASTEROIDS           ;pointer to asteroid array
     LD R2, MAX_ASTEROIDS        ;loop counter
     
+    AND R0, R0, #0              ;clear R0
+    
     ;check active asteroids
 checkLoop
     LDR R3, R1, #0          ;R3=asteroid row
@@ -527,7 +548,6 @@ checkLoop
     BRnp nextAstCollision       ;no collision
     
     ;collision
-    AND R0, R0, #0
     ADD R0, R0, #1          ;return 1 for collision
     BR collisionDone
     
@@ -541,7 +561,7 @@ nextAstCollision
 
 collisionDone
     
-    ;restore regiters
+    ;restore registers
     LDR R7, R6, #0
     ADD R6, R6, #1
     LDR R4, R6, #0
@@ -567,10 +587,44 @@ RET
 ;R7 - 
 ;********************************************************************
 delay
-    LD R0, SPEED        ;hardcoded to #8000
-    delayLoop           ;countdown to create delay
-        ADD R0, R0, #-1
-    BRp delayLoop
+
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop1           ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRzp delayLoop1
+        
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop2           ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop2
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop3          ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop3
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop4          ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop4
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop5          ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop5
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop6          ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop6
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop7          ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop7
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop8          ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop8
+    ; LD R0, SPEED        ;hardcoded to #8000
+    ; delayLoop9          ;countdown to create delay
+    ;     ADD R0, R0, #-1
+    ;     BRp delayLoop9
 RET
 
 ;************************gameOver***********************************
